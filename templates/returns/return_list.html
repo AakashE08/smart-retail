@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Return Requests{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">My Return Requests</h5>
+                    <a href="{% url 'returns:request_return' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>New Return Request
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if returns %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Return ID</th>
+                                    <th>Order Number</th>
+                                    <th>Status</th>
+                                    <th>Reason</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for return in returns %}
+                                <tr>
+                                    <td>#{{ return.id }}</td>
+                                    <td>{{ return.order.order_number }}</td>
+                                    <td>
+                                        <span class="badge {{ return.get_status_badge_class }}">
+                                            {{ return.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ return.get_reason_display }}</td>
+                                    <td>{{ return.created_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <a href="{% url 'returns:return_detail' return.pk %}"
+                                            class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        {% if return.status == 'PENDING' %}
+                                        <a href="{% url 'returns:return_update' return.pk %}"
+                                            class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <a href="{% url 'returns:return_delete' return.pk %}"
+                                            class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        You haven't made any return requests yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

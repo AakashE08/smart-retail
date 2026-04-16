@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Customer Report - Retail Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Customer Report</h1>
+        <div>
+            <button type="button" class="btn btn-outline-primary me-2" id="printReport">
+                <i class="fas fa-print me-2"></i>Print
+            </button>
+            <button type="button" class="btn btn-outline-success" id="exportReport">
+                <i class="fas fa-file-excel me-2"></i>Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="date_range" class="form-label">Date Range</label>
+                    <select name="date_range" id="date_range" class="form-select">
+                        <option value="all_time" {% if date_range == 'all_time' %}selected{% endif %}>All Time</option>
+                        <option value="this_month" {% if date_range == 'this_month' %}selected{% endif %}>This Month</option>
+                        <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>Last Month</option>
+                        <option value="this_year" {% if date_range == 'this_year' %}selected{% endif %}>This Year</option>
+                        <option value="last_year" {% if date_range == 'last_year' %}selected{% endif %}>Last Year</option>
+                        <option value="custom" {% if date_range == 'custom' %}selected{% endif %}>Custom Range</option>
+                    </select>
+                </div>
+                <div class="col-md-3" id="customDateRange" {% if date_range != 'custom' %}style="display: none;"{% endif %}>
+                    <div class="row">
+                        <div class="col-6">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-6">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label for="sort_by" class="form-label">Sort By</label>
+                    <select name="sort_by" id="sort_by" class="form-select">
+                        <option value="total_spent" {% if sort_by == 'total_spent' %}selected{% endif %}>Total Spent</option>
+                        <option value="order_count" {% if sort_by == 'order_count' %}selected{% endif %}>Order Count</option>
+                        <option value="avg_order" {% if sort_by == 'avg_order' %}selected{% endif %}>Average Order Value</option>
+                        <option value="last_order" {% if sort_by == 'last_order' %}selected{% endif %}>Last Order Date</option>
+                        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total Customers</h6>
+                            <h2 class="mt-2 mb-0">{{ total_customers }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-users fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total Revenue</h6>
+                            <h2 class="mt-2 mb-0">₹{{ total_revenue }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-rupee-sign fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Average Order Value</h6>
+                            <h2 class="mt-2 mb-0">₹{{ avg_order_value }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-shopping-cart fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Active Customers</h6>
+                            <h2 class="mt-2 mb-0">{{ active_customers }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-user-check fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Data Table -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <h5 class="card-title mb-0">Customer Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Orders</th>
+                            <th>Total Spent</th>
+                            <th>Avg. Order Value</th>
+                            <th>Last Order</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2"
+                                        style="width: 40px; height: 40px;">
+                                        <i class="fas fa-user text-muted"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ customer.get_full_name|default:customer.username }}</h6>
+                                        <small class="text-muted">@{{ customer.username }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ customer.email }}</td>
+                            <td>{{ customer.phone_number|default:"-" }}</td>
+                            <td>{{ customer.order_count }}</td>
+                            <td>₹{{ customer.total_spent }}</td>
+                            <td>₹{{ customer.avg_order_value }}</td>
+                            <td>{{ customer.last_order_date|date:"M d, Y"|default:"-" }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'accounts:user_detail' customer.id %}" class="btn btn-sm btn-info"
+                                        data-bs-toggle="tooltip" title="View Profile">
+                                        <i class="fas fa-user"></i>
+                                    </a>
+                                    <a href="{% url 'orders:customer_orders' %}?customer={{ customer.id }}" class="btn btn-sm btn-primary"
+                                        data-bs-toggle="tooltip" title="View Orders">
+                                        <i class="fas fa-shopping-bag"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                <p class="mb-0">No customers found for the selected filters.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if customers.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- Previous Page -->
+                    {% if customers.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ customers.previous_page_number }}{% if date_range %}&date_range={{ date_range }}{% endif %}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}" aria-label="Previous">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+                    </li>
+                    {% endif %}
+
+                    <!-- First Page -->
+                    {% if customers.number > 3 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if date_range %}&date_range={{ date_range }}{% endif %}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}">1</a>
+                    </li>
+                    {% if customers.number > 4 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+
+                    <!-- Current Page and Surrounding Pages -->
+                    {% for i in customers.paginator.page_range %}
+                        {% if i > customers.number|add:"-2" and i < customers.number|add:"2" %}
+                        <li class="page-item {% if customers.number == i %}active{% endif %}">
+                            <a class="page-link" href="?page={{ i }}{% if date_range %}&date_range={{ date_range }}{% endif %}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}">{{ i }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Last Page -->
+                    {% if customers.number < customers.paginator.num_pages|add:"-2" %}
+                    {% if customers.number < customers.paginator.num_pages|add:"-3" %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ customers.paginator.num_pages }}{% if date_range %}&date_range={{ date_range }}{% endif %}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}">{{ customers.paginator.num_pages }}</a>
+                    </li>
+                    {% endif %}
+
+                    <!-- Next Page -->
+                    {% if customers.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ customers.next_page_number }}{% if date_range %}&date_range={{ date_range }}{% endif %}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}" aria-label="Next">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle date range selection
+        const dateRangeSelect = document.getElementById('date_range');
+        const customDateRange = document.getElementById('customDateRange');
+        
+        dateRangeSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.style.display = 'block';
+            } else {
+                customDateRange.style.display = 'none';
+            }
+        });
+        
+        // Print report functionality
+        document.getElementById('printReport').addEventListener('click', function() {
+            window.print();
+        });
+        
+        // Export report functionality (placeholder)
+        document.getElementById('exportReport').addEventListener('click', function() {
+            alert('Export functionality will be implemented soon.');
+        });
+    });
+</script>
+{% endblock %}

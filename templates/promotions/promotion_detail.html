@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ promotion.name }} - Promotion Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">{{ promotion.name }}</h1>
+        <div>
+            <a href="{% url 'promotions:promotion_list' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left me-2"></i>Back to List
+            </a>
+            <a href="{% url 'promotions:edit_promotion' promotion.id %}" class="btn btn-warning">
+                <i class="fas fa-edit me-2"></i>Edit Promotion
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Promotion Details -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Promotion Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4>{{ promotion.name }}</h4>
+                            <p class="text-muted">{{ promotion.description }}</p>
+                            <hr>
+                            <dl class="row">
+                                <dt class="col-sm-4">Discount</dt>
+                                <dd class="col-sm-8">{{ promotion.discount_percentage }}%</dd>
+
+                                <dt class="col-sm-4">Start Date</dt>
+                                <dd class="col-sm-8">{{ promotion.start_date }}</dd>
+
+                                <dt class="col-sm-4">End Date</dt>
+                                <dd class="col-sm-8">{{ promotion.end_date }}</dd>
+
+                                <dt class="col-sm-4">Status</dt>
+                                <dd class="col-sm-8">
+                                    {% if promotion.is_current %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{% url 'promotions:promotion_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to List
+                        </a>
+                        {% if user.role == 'admin' %}
+                        <a href="{% url 'promotions:promotion_update' promotion.pk %}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Edit
+                        </a>
+                        <a href="{% url 'promotions:promotion_delete' promotion.pk %}" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Delete
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Applicable Items -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        {% if promotion.applies_to == 'CATEGORY' %}Applicable Categories
+                        {% elif promotion.applies_to == 'PRODUCT' %}Applicable Products
+                        {% else %}All Products{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    {% if promotion.applies_to == 'CATEGORY' %}
+                                    <th>Category Name</th>
+                                    <th>Description</th>
+                                    {% else %}
+                                    <th>Product Name</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    {% if promotion.applies_to == 'CATEGORY' %}
+                                    <td>{{ item.category.name }}</td>
+                                    <td>{{ item.category.description|default:"No description" }}</td>
+                                    {% else %}
+                                    <td>{{ item.product.name }}</td>
+                                    <td>{{ item.product.category.name }}</td>
+                                    <td>₹{{ item.product.price }}</td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">This promotion applies to all products.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage History -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Usage History</h5>
+                </div>
+                <div class="card-body">
+                    {% if usage_history %}
+                    <div class="list-group">
+                        {% for usage in usage_history %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Order #{{ usage.order.order_number }}</h6>
+                                <small>{{ usage.used_date|date:"M d, Y H:i" }}</small>
+                            </div>
+                            <p class="mb-1">Customer: {{ usage.order.customer.username }}</p>
+                            <small>Discount Applied: ₹{{ usage.discount_amount }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No usage history available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

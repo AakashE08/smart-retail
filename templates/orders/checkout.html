@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Order Review</h3>
+                </div>
+                <div class="card-body">
+                    {% if items %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if item.product.image %}
+                                            <img src="{{ item.product.image.url }}" class="img-thumbnail me-3"
+                                                style="width: 50px;" alt="{{ item.product.name }}">
+                                            {% else %}
+                                            <img src="{% static 'images/no-image.png' %}" class="img-thumbnail me-3"
+                                                style="width: 50px;" alt="No image">
+                                            {% endif %}
+                                            <div>
+                                                <h6 class="mb-0">{{ item.product.name }}</h6>
+                                                <small class="text-muted">{% if item.product.sku %}SKU: {{ item.product.sku }}{% endif %}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>₹{{ item.price|floatformat:2 }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>₹{{ item.total_price|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                    <td>₹{{ cart.total_amount|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Tax (18%):</strong></td>
+                                    <td>₹{{ tax_amount|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Shipping:</strong></td>
+                                    <td>₹{{ shipping_charges|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                    <td><strong>₹{{ total_with_tax_and_shipping|floatformat:2 }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        Your cart is empty. <a href="{% url 'orders:customer_shop' %}">Continue shopping</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Customer Details</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2">Personal Information</h5>
+                            <p><strong>Name:</strong> {{ customer_details.full_name }}</p>
+                            <p><strong>Email:</strong> {{ customer_details.email }}</p>
+                            <p><strong>Phone:</strong> {{ customer_details.phone }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2">Shipping Address</h5>
+                            <p>{{ customer_details.address_line1 }}</p>
+                            {% if customer_details.address_line2 %}
+                            <p>{{ customer_details.address_line2 }}</p>
+                            {% endif %}
+                            <p>{{ customer_details.city }}, {{ customer_details.state }} {{ customer_details.zip_code }}</p>
+                            <p>{{ customer_details.country }}</p>
+                        </div>
+                    </div>
+                    {% if customer_details.notes %}
+                    <div class="mt-3">
+                        <h5 class="border-bottom pb-2">Special Instructions</h5>
+                        <p>{{ customer_details.notes }}</p>
+                    </div>
+                    {% endif %}
+                    <div class="mt-3 text-end">
+                        <a href="{% url 'orders:customer_details' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-edit"></i> Edit Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Order Summary</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <p class="mb-0"><strong>Order Date:</strong></p>
+                                <p class="text-muted">{{ current_date|date:"M d, Y" }}</p>
+                            </div>
+                            <div class="col-6">
+                                <p class="mb-0"><strong>Status:</strong></p>
+                                <p><span class="badge bg-warning">Pending</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>₹{{ cart.total_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tax (18%):</span>
+                        <span>₹{{ tax_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Shipping:</span>
+                        <span>₹{{ shipping_charges|floatformat:2 }}</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>Total:</strong>
+                        <strong>₹{{ total_with_tax_and_shipping|floatformat:2 }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            {% if items %}
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Payment Information</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'orders:checkout' %}" id="paymentForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="payment_method" class="form-label">Payment Method*</label>
+                            <select class="form-select" id="payment_method" name="payment_method" required>
+                                <option value="">Select payment method</option>
+                                <option value="COD">Cash On Delivery</option>
+                                <option value="ONLINE">Online Payment</option>
+                                <option value="CARD">Credit/Debit Card</option>
+                                <option value="UPI">UPI</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Payment method specific fields (shown/hidden based on selection) -->
+                        <div id="card-details" class="payment-details mb-3" style="display: none;">
+                            <div class="mb-3">
+                                <label for="card_number" class="form-label">Card Number</label>
+                                <input type="text" class="form-control" id="card_number" placeholder="**** **** **** ****">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="expiry_date" class="form-label">Expiry Date</label>
+                                    <input type="text" class="form-control" id="expiry_date" placeholder="MM/YY">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="cvv" class="form-label">CVV</label>
+                                    <input type="text" class="form-control" id="cvv" placeholder="***">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="upi-details" class="payment-details mb-3" style="display: none;">
+                            <div class="mb-3">
+                                <label for="upi_id" class="form-label">UPI ID</label>
+                                <input type="text" class="form-control" id="upi_id" placeholder="username@upi">
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Place Order</button>
+                            <a href="{% url 'orders:view_cart' %}" class="btn btn-outline-secondary">Back to Cart</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const paymentMethodSelect = document.getElementById('payment_method');
+        const cardDetails = document.getElementById('card-details');
+        const upiDetails = document.getElementById('upi-details');
+        
+        paymentMethodSelect.addEventListener('change', function() {
+            // Hide all payment detail sections
+            document.querySelectorAll('.payment-details').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show the relevant section based on selection
+            const selectedMethod = this.value;
+            if (selectedMethod === 'CARD') {
+                cardDetails.style.display = 'block';
+            } else if (selectedMethod === 'UPI') {
+                upiDetails.style.display = 'block';
+            }
+        });
+        
+        // Form validation
+        const form = document.getElementById('paymentForm');
+        form.addEventListener('submit', function(event) {
+            const paymentMethod = paymentMethodSelect.value;
+            if (!paymentMethod) {
+                event.preventDefault();
+                alert('Please select a payment method');
+            }
+        });
+    });
+</script>
+{% endblock %}

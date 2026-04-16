@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Customer Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Order Items</h3>
+                </div>
+                <div class="card-body">
+                    {% if items %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if item.product.image %}
+                                            <img src="{{ item.product.image.url }}" class="img-thumbnail me-3"
+                                                style="width: 50px;" alt="{{ item.product.name }}">
+                                            {% else %}
+                                            <img src="{% static 'images/no-image.png' %}" class="img-thumbnail me-3"
+                                                style="width: 50px;" alt="No image">
+                                            {% endif %}
+                                            <div>
+                                                <h6 class="mb-0">{{ item.product.name }}</h6>
+                                                <small class="text-muted">{% if item.product.sku %}SKU: {{ item.product.sku }}{% endif %}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>₹{{ item.price|floatformat:2 }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>₹{{ item.total_price|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                    <td>₹{{ cart.total_amount|floatformat:2 }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        Your cart is empty. <a href="{% url 'orders:customer_shop' %}">Continue shopping</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Order Summary</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>₹{{ cart.total_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tax (18%):</span>
+                        <span>₹{{ tax_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Shipping:</span>
+                        <span>₹{{ shipping_charges|floatformat:2 }}</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>Total:</strong>
+                        <strong>₹{{ total_with_tax_and_shipping|floatformat:2 }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            {% if items %}
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Customer Details</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'orders:customer_details' %}" id="customerDetailsForm">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <h5 class="border-bottom pb-2">Personal Information</h5>
+                            <div class="mb-3">
+                                <label for="full_name" class="form-label">Full Name*</label>
+                                <input type="text" class="form-control {% if form.full_name.errors %}is-invalid{% endif %}" 
+                                       id="full_name" name="full_name" 
+                                       value="{{ form.full_name.value|default:request.user.get_full_name }}" required>
+                                {% if form.full_name.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.full_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email*</label>
+                                <input type="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
+                                       id="email" name="email" 
+                                       value="{{ form.email.value|default:request.user.email }}" required>
+                                {% if form.email.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.email.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone Number*</label>
+                                <input type="tel" class="form-control {% if form.phone.errors %}is-invalid{% endif %}" 
+                                       id="phone" name="phone" 
+                                       value="{{ form.phone.value|default:'' }}" required>
+                                {% if form.phone.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.phone.errors }}
+                                </div>
+                                {% endif %}
+                                <div class="form-text">Please provide a valid phone number for delivery updates.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h5 class="border-bottom pb-2">Shipping Address</h5>
+                            <div class="mb-3">
+                                <label for="address_line1" class="form-label">Address Line 1*</label>
+                                <input type="text" class="form-control {% if form.address_line1.errors %}is-invalid{% endif %}" 
+                                       id="address_line1" name="address_line1" 
+                                       value="{{ form.address_line1.value|default:'' }}" required>
+                                {% if form.address_line1.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.address_line1.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="address_line2" class="form-label">Address Line 2</label>
+                                <input type="text" class="form-control {% if form.address_line2.errors %}is-invalid{% endif %}" 
+                                       id="address_line2" name="address_line2" 
+                                       value="{{ form.address_line2.value|default:'' }}">
+                                {% if form.address_line2.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.address_line2.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="city" class="form-label">City*</label>
+                                    <input type="text" class="form-control {% if form.city.errors %}is-invalid{% endif %}" 
+                                           id="city" name="city" 
+                                           value="{{ form.city.value|default:'' }}" required>
+                                    {% if form.city.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.city.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="state" class="form-label">State*</label>
+                                    <input type="text" class="form-control {% if form.state.errors %}is-invalid{% endif %}" 
+                                           id="state" name="state" 
+                                           value="{{ form.state.value|default:'' }}" required>
+                                    {% if form.state.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.state.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="zip_code" class="form-label">ZIP Code*</label>
+                                    <input type="text" class="form-control {% if form.zip_code.errors %}is-invalid{% endif %}" 
+                                           id="zip_code" name="zip_code" 
+                                           value="{{ form.zip_code.value|default:'' }}" required>
+                                    {% if form.zip_code.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.zip_code.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="country" class="form-label">Country*</label>
+                                    <input type="text" class="form-control {% if form.country.errors %}is-invalid{% endif %}" 
+                                           id="country" name="country" 
+                                           value="{{ form.country.value|default:'India' }}" required>
+                                    {% if form.country.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.country.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h5 class="border-bottom pb-2">Special Instructions</h5>
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Order Notes (Optional)</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                          placeholder="Special instructions for delivery or any other notes">{{ form.notes.value|default:'' }}</textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Proceed to Checkout</button>
+                            <a href="{% url 'orders:view_cart' %}" class="btn btn-outline-secondary">Back to Cart</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('customerDetailsForm');
+        form.addEventListener('submit', function(event) {
+            let isValid = true;
+            const requiredFields = form.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+            
+            // Phone validation
+            const phoneField = document.getElementById('phone');
+            const phoneRegex = /^\d{10}$/;
+            if (phoneField.value && !phoneRegex.test(phoneField.value.trim())) {
+                phoneField.classList.add('is-invalid');
+                if (!phoneField.nextElementSibling || !phoneField.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.classList.add('invalid-feedback');
+                    errorDiv.textContent = 'Please enter a valid 10-digit phone number';
+                    phoneField.parentNode.insertBefore(errorDiv, phoneField.nextSibling);
+                }
+                isValid = false;
+            }
+            
+            // ZIP code validation
+            const zipField = document.getElementById('zip_code');
+            const zipRegex = /^\d{6}$/;
+            if (zipField.value && !zipRegex.test(zipField.value.trim())) {
+                zipField.classList.add('is-invalid');
+                if (!zipField.nextElementSibling || !zipField.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.classList.add('invalid-feedback');
+                    errorDiv.textContent = 'Please enter a valid 6-digit ZIP code';
+                    zipField.parentNode.insertBefore(errorDiv, zipField.nextSibling);
+                }
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                event.preventDefault();
+                // Scroll to the first invalid field
+                const firstInvalid = form.querySelector('.is-invalid');
+                if (firstInvalid) {
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstInvalid.focus();
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

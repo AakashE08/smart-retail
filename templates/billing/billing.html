@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+
+{% block title %}Billing - Retail Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Product Selection -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Product Selection</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" id="productSearch" class="form-control"
+                                    placeholder="Search products...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <select id="categoryFilter" class="form-select">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row" id="productGrid">
+                        {% for product in products %}
+                        <div class="col-md-4 mb-3 product-item" data-category="{{ product.category.id }}">
+                            <div class="card h-100">
+                                {% if product.image %}
+                                <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}"
+                                    style="height: 150px; object-fit: cover;">
+                                {% else %}
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center"
+                                    style="height: 150px;">
+                                    <i class="fas fa-image fa-3x text-muted"></i>
+                                </div>
+                                {% endif %}
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ product.name }}</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">SKU: {{ product.sku }}</small><br>
+                                        <strong>${{ product.price }}</strong>
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="input-group input-group-sm" style="width: 120px;">
+                                            <button class="btn btn-outline-secondary minus-btn" type="button">-</button>
+                                            <input type="number" class="form-control text-center quantity-input"
+                                                value="1" min="1" max="{{ product.quantity }}">
+                                            <button class="btn btn-outline-secondary plus-btn" type="button">+</button>
+                                        </div>
+                                        <button class="btn btn-primary btn-sm add-to-cart"
+                                            data-product-id="{{ product.id }}">
+                                            <i class="fas fa-cart-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cart and Billing -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Cart & Billing</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="billingForm">
+                        {% csrf_token %}
+
+                        <!-- Customer Selection -->
+                        <div class="mb-3">
+                            <label class="form-label">Customer</label>
+                            <select name="customer" class="form-select" required>
+                                <option value="">Select Customer</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.id }}">{{ customer.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Cart Items -->
+                        <div class="mb-3">
+                            <label class="form-label">Cart Items</label>
+                            <div id="cartItems" class="list-group">
+                                <!-- Cart items will be added here dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="mb-3">
+                            <label class="form-label">Payment Method</label>
+                            <select name="payment_method" class="form-select" required>
+                                <option value="CASH">Cash</option>
+                                <option value="CARD">Card</option>
+                                <option value="UPI">UPI</option>
+                            </select>
+                        </div>
+
+                        <!-- Summary -->
+                        <div class="border-top pt-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Subtotal:</span>
+                                <span id="subtotal">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Tax (10%):</span>
+                                <span id="tax">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span>Total:</span>
+                                <span id="total" class="fw-bold">$0.00</span>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-print me-2"></i>Print Bill
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        background-color: white;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .product-item .card {
+        transition: transform 0.3s;
+    }
+
+    .product-item .card:hover {
+        transform: translateY(-5px);
+    }
+
+    .input-group-text {
+        background-color: transparent;
+    }
+
+    .quantity-input {
+        text-align: center;
+    }
+
+    .list-group-item {
+        border: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const cart = [];
+        let subtotal = 0;
+
+        // Product search
+        document.getElementById('productSearch').addEventListener('input', function (e) {
+            const searchTerm = e.target.value.toLowerCase();
+            document.querySelectorAll('.product-item').forEach(item => {
+                const productName = item.querySelector('.card-title').textContent.toLowerCase();
+                item.style.display = productName.includes(searchTerm) ? 'block' : 'none';
+            });
+        });
+
+        // Category filter
+        document.getElementById('categoryFilter').addEventListener('change', function (e) {
+            const categoryId = e.target.value;
+            document.querySelectorAll('.product-item').forEach(item => {
+                if (categoryId === '' || item.dataset.category === categoryId) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+
+        // Quantity controls
+        document.querySelectorAll('.minus-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const input = this.nextElementSibling;
+                if (input.value > 1) {
+                    input.value = parseInt(input.value) - 1;
+                }
+            });
+        });
+
+        document.querySelectorAll('.plus-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const input = this.previousElementSibling;
+                input.value = parseInt(input.value) + 1;
+            });
+        });
+
+        // Add to cart
+        document.querySelectorAll('.add-to-cart').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const productId = this.dataset.productId;
+                const card = this.closest('.card');
+                const productName = card.querySelector('.card-title').textContent;
+                const price = parseFloat(card.querySelector('strong').textContent.replace('$', ''));
+                const quantity = parseInt(card.querySelector('.quantity-input').value);
+
+                // Add to cart array
+                cart.push({
+                    id: productId,
+                    name: productName,
+                    price: price,
+                    quantity: quantity
+                });
+
+                updateCart();
+            });
+        });
+
+        // Update cart display
+        function updateCart() {
+            const cartItems = document.getElementById('cartItems');
+            cartItems.innerHTML = '';
+            subtotal = 0;
+
+            cart.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                subtotal += itemTotal;
+
+                const li = document.createElement('div');
+                li.className = 'list-group-item';
+                li.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0">${item.name}</h6>
+                        <small class="text-muted">$${item.price} x ${item.quantity}</small>
+                    </div>
+                    <div>
+                        <span class="fw-bold">$${itemTotal.toFixed(2)}</span>
+                        <button class="btn btn-sm btn-danger ms-2 remove-item" data-id="${item.id}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+                cartItems.appendChild(li);
+            });
+
+            // Update totals
+            const tax = subtotal * 0.1;
+            const total = subtotal + tax;
+
+            document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+            document.getElementById('tax').textContent = `$${tax.toFixed(2)}`;
+            document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+        }
+
+        // Remove item from cart
+        document.getElementById('cartItems').addEventListener('click', function (e) {
+            if (e.target.closest('.remove-item')) {
+                const productId = e.target.closest('.remove-item').dataset.id;
+                const index = cart.findIndex(item => item.id === productId);
+                if (index !== -1) {
+                    cart.splice(index, 1);
+                    updateCart();
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

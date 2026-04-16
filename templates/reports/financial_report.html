@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load report_filters %}
+
+{% block title %}Financial Report - Retail Management System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        height: 300px;
+    }
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .card {
+            break-inside: avoid;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Financial Report</h1>
+        <div>
+            <button type="button" class="btn btn-outline-primary me-2 no-print" id="printReport">
+                <i class="fas fa-print me-2"></i>Print
+            </button>
+            <button type="button" class="btn btn-outline-success no-print" id="exportReport">
+                <i class="fas fa-file-excel me-2"></i>Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4 no-print">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="date_range" class="form-label">Date Range</label>
+                    <select name="date_range" id="date_range" class="form-select">
+                        <option value="this_month" {% if date_range == 'this_month' %}selected{% endif %}>This Month</option>
+                        <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>Last Month</option>
+                        <option value="this_year" {% if date_range == 'this_year' %}selected{% endif %}>This Year</option>
+                        <option value="last_year" {% if date_range == 'last_year' %}selected{% endif %}>Last Year</option>
+                        <option value="custom" {% if date_range == 'custom' %}selected{% endif %}>Custom Range</option>
+                    </select>
+                </div>
+                <div class="col-md-4" id="customDateRange" {% if date_range != 'custom' %}style="display: none;"{% endif %}>
+                    <div class="row">
+                        <div class="col-6">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-6">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Period -->
+    <div class="alert alert-info mb-4">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-calendar-alt me-2"></i>
+            <strong>Report Period:</strong> {{ start_date|date:"F d, Y" }} - {{ end_date|date:"F d, Y" }}
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total Revenue</h6>
+                            <h2 class="mt-2 mb-0">u20b9{{ total_revenue }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-rupee-sign fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Gross Profit</h6>
+                            <h2 class="mt-2 mb-0">u20b9{{ gross_profit }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-chart-line fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Gross Margin</h6>
+                            <h2 class="mt-2 mb-0">{{ gross_margin|floatformat:2 }}%</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-percentage fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Average Order Value</h6>
+                            <h2 class="mt-2 mb-0">u20b9{{ average_order_value }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-shopping-cart fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue vs Cost -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Revenue vs Cost</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Amount</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Total Revenue</td>
+                                    <td>u20b9{{ total_revenue }}</td>
+                                    <td>100%</td>
+                                </tr>
+                                <tr>
+                                    <td>Cost of Goods Sold</td>
+                                    <td>u20b9{{ total_cost }}</td>
+                                    <td>{{ cost_percentage|floatformat:2 }}%</td>
+                                </tr>
+                                <tr class="table-success">
+                                    <td><strong>Gross Profit</strong></td>
+                                    <td><strong>u20b9{{ gross_profit }}</strong></td>
+                                    <td><strong>{{ gross_margin|floatformat:2 }}%</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Sales by Payment Method</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Payment Method</th>
+                                    <th>Amount</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for method, amount in payment_methods.items %}
+                                <tr>
+                                    <td>{{ method }}</td>
+                                    <td>u20b9{{ amount }}</td>
+                                    <td>{{ payment_percentages|get_item:method|floatformat:2 }}%</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-primary">
+                                    <td><strong>Total</strong></td>
+                                    <td><strong>u20b9{{ total_revenue }}</strong></td>
+                                    <td><strong>100%</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Sales Chart -->
+    <div class="card mb-4">
+        <div class="card-header bg-white">
+            <h5 class="card-title mb-0">Monthly Sales ({{ today.year }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="monthlySalesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Performance Indicators -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <h5 class="card-title mb-0">Key Performance Indicators</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <div class="display-4 mb-2">{{ order_count }}</div>
+                            <div class="text-muted">Total Orders</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <div class="display-4 mb-2">u20b9{{ average_order_value|floatformat:2 }}</div>
+                            <div class="text-muted">Average Order Value</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <div class="display-4 mb-2">{{ gross_margin|floatformat:1 }}%</div>
+                            <div class="text-muted">Gross Margin</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <div class="display-4 mb-2">u20b9{{ profit_per_order|floatformat:2 }}</div>
+                            <div class="text-muted">Profit per Order</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle date range selection
+        const dateRangeSelect = document.getElementById('date_range');
+        const customDateRange = document.getElementById('customDateRange');
+        
+        dateRangeSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.style.display = 'block';
+            } else {
+                customDateRange.style.display = 'none';
+            }
+        });
+        
+        // Print report functionality
+        document.getElementById('printReport').addEventListener('click', function() {
+            window.print();
+        });
+        
+        // Export report functionality (placeholder)
+        document.getElementById('exportReport').addEventListener('click', function() {
+            alert('Export functionality will be implemented soon.');
+        });
+
+        // Monthly Sales Chart
+        const monthlySalesCtx = document.getElementById('monthlySalesChart').getContext('2d');
+        const monthLabels = [{% for item in monthly_sales %}"{{ item.month }}",{% endfor %}];
+        const monthData = [{% for item in monthly_sales %}{{ item.total }},{% endfor %}];
+        
+        const monthlySalesData = {
+            labels: monthLabels,
+            datasets: [{
+                label: 'Monthly Sales',
+                data: monthData,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        };
+
+        const monthlySalesChart = new Chart(monthlySalesCtx, {
+            type: 'bar',
+            data: monthlySalesData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

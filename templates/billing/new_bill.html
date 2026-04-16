@@ -1,0 +1,846 @@
+
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create New Bill{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
+<style>
+    .product-row {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+    .bill-summary {
+        position: sticky;
+        top: 20px;
+    }
+    .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        border-top-color: #007bff;
+        animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">Create New Bill</h3>
+                    <div>
+                        <span class="badge bg-primary" id="bill-number">BILL-{{ current_time|date:"Ymd"}}-{{ next_bill_id }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="billForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="bill_number" id="bill_number_input" value="BILL-{{ current_time|date:"Ymd"}}-{{ next_bill_id }}">
+                        <input type="hidden" name="total_amount" id="total_amount" value="0.00">
+
+                        <!-- Customer Selection -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="customer" class="form-label">Customer</label>
+                                <div class="input-group">
+                                    <select class="form-select select2" id="customer" name="customer" required>
+                                        <option value="">Select Customer</option>
+                                        {% for customer in customers %}
+                                        <option value="{{ customer.id }}">
+                                            {{ customer.first_name }} {{ customer.last_name }} - {{ customer.username }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#customerModal">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="bill_date" class="form-label">Bill Date</label>
+                                <input type="date" class="form-control" id="bill_date" name="bill_date"
+                                    value="{{ today|date:'Y-m-d' }}" required>
+                            </div>
+                        </div>
+
+                        <!-- Product Search and Selection -->
+                        <div class="row mb-4">
+                            <div class="col-md-5">
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" id="nameSearch"
+                                        placeholder="Search products by name">
+                                    <button class="btn btn-outline-secondary" type="button" id="searchByName">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="form-group mb-3">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="skuSearch" placeholder="Search by Product ID">
+                                        <button type="button" class="btn btn-primary" id="searchBySku">Search</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group mb-3">
+                                    <button type="button" class="btn btn-success w-100" id="showAllProducts">
+                                        <i class="fas fa-list me-1"></i> All Products
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Search Results -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="searchResults">
+                                        <thead>
+                                            <tr>
+                                                <th>Product Name</th>
+                                                <th>Product ID</th>
+                                                <th>Price</th>
+                                                <th>Stock</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Search results will be displayed here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bill Items Table -->
+                        <div class="table-responsive mb-4">
+                            <table class="table table-hover" id="billItems">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Price</th>
+                                        <th>Quantity</th>
+                                        <th>Total</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Bill items will be added here dynamically -->
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                        <td id="subtotal">₹0.00</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Tax (18%):</strong></td>
+                                        <td id="tax">₹0.00</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                        <td id="total">₹0.00</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- Payment Information -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="payment_method" class="form-label">Payment Method</label>
+                                <select class="form-select" id="payment_method" name="payment_method" required>
+                                    <option value="cash">Cash</option>
+                                    <option value="card">Card</option>
+                                    <option value="upi">UPI</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="payment_status" class="form-label">Payment Status</label>
+                                <select class="form-select" id="payment_status" name="payment_status" required>
+                                    <option value="paid">Paid</option>
+                                    <option value="pending">Pending</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'billing:billing_dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Create Bill
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Side Panel - Bill Summary -->
+        <div class="col-md-4">
+            <div class="card bill-summary mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="card-title mb-0">Bill Summary</h4>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Items Count:</span>
+                        <span id="items-count" class="fw-bold">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Subtotal:</span>
+                        <span id="summary-subtotal" class="fw-bold">₹0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Tax (18%):</span>
+                        <span id="summary-tax" class="fw-bold">₹0.00</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="fs-5">Total:</span>
+                        <span id="summary-total" class="fs-5 fw-bold">₹0.00</span>
+                    </div>
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle me-2"></i> This summary updates in real-time as you add or modify items.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Quick Actions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-success" id="apply-discount">
+                            <i class="fas fa-percent me-2"></i> Apply Discount
+                        </button>
+                        <button type="button" class="btn btn-outline-info" id="add-custom-item">
+                            <i class="fas fa-plus-circle me-2"></i> Add Custom Item
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" id="print-preview">
+                            <i class="fas fa-print me-2"></i> Print Preview
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Bills -->
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Recent Bills</h4>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for bill in recent_bills %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ bill.bill_number }}</strong><br>
+                                    <small class="text-muted">{{ bill.customer.username }} - {{ bill.created_at|date:"M d, Y" }}</small>
+                                </div>
+                                <span class="badge bg-success rounded-pill">₹{{ bill.total_amount }}</span>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-center py-4">
+                            <i class="fas fa-receipt text-muted fa-2x mb-2"></i>
+                            <p class="mb-0">No recent bills</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Modal -->
+<div class="modal fade" id="customerModal" tabindex="-1" aria-labelledby="customerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerModalLabel">Add New Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="customerForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="last_name" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="phone" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <textarea class="form-control" id="address" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveCustomer">Save Customer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden template for bill items -->
+<template id="billItemTemplate">
+    <tr>
+        <td>
+            <input type="hidden" name="product_id" value="">
+            <span class="product-name"></span>
+            <span class="product-sku text-muted"></span>
+        </td>
+        <td class="price">₹0.00</td>
+        <td>
+            <input type="number" class="form-control form-control-sm quantity" value="1" min="1" style="width: 80px;">
+        </td>
+        <td class="total">₹0.00</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-danger remove-item">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    </tr>
+</template>
+{% endblock %}
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Select2
+        $('.select2').select2({
+            theme: 'bootstrap-5'
+        });
+        
+        const billItems = document.getElementById('billItems').getElementsByTagName('tbody')[0];
+        const nameSearch = document.getElementById('nameSearch');
+        const skuSearch = document.getElementById('skuSearch');
+        const searchByNameBtn = document.getElementById('searchByName');
+        const searchBySkuBtn = document.getElementById('searchBySku');
+        const searchResults = document.getElementById('searchResults').getElementsByTagName('tbody')[0];
+        const billItemTemplate = document.getElementById('billItemTemplate');
+        
+        // Summary elements
+        const itemsCountEl = document.getElementById('items-count');
+        const summarySubtotalEl = document.getElementById('summary-subtotal');
+        const summaryTaxEl = document.getElementById('summary-tax');
+        const summaryTotalEl = document.getElementById('summary-total');
+        
+        // Quick action buttons
+        const applyDiscountBtn = document.getElementById('apply-discount');
+        const addCustomItemBtn = document.getElementById('add-custom-item');
+        const printPreviewBtn = document.getElementById('print-preview');
+        
+        // Quick action event listeners
+        
+        applyDiscountBtn.addEventListener('click', function() {
+            const discountType = prompt('Enter discount type (percentage or amount):');
+            if (!discountType) return;
+            
+            if (discountType.toLowerCase() === 'percentage') {
+                const percentage = prompt('Enter discount percentage:');
+                if (percentage && !isNaN(percentage)) {
+                    alert(`${percentage}% discount will be applied to the total bill.`);
+                    // Implementation would go here
+                }
+            } else if (discountType.toLowerCase() === 'amount') {
+                const amount = prompt('Enter discount amount:');
+                if (amount && !isNaN(amount)) {
+                    alert(`₹${amount} discount will be applied to the total bill.`);
+                    // Implementation would go here
+                }
+            } else {
+                alert('Invalid discount type. Please enter "percentage" or "amount".');
+            }
+        });
+        
+        addCustomItemBtn.addEventListener('click', function() {
+            const itemName = prompt('Enter item name:');
+            if (!itemName) return;
+            
+            const itemPrice = prompt('Enter item price:');
+            if (!itemPrice || isNaN(itemPrice)) {
+                alert('Please enter a valid price.');
+                return;
+            }
+            
+            // Create custom product object
+            const customProduct = {
+                id: 'custom-' + Date.now(),
+                name: itemName,
+                sku: 'CUSTOM',
+                price: parseFloat(itemPrice).toFixed(2),
+                stock_quantity: 999 // Unlimited for custom items
+            };
+            
+            addProductToBill(customProduct);
+        });
+        
+        printPreviewBtn.addEventListener('click', function() {
+            // Check if there are items in the bill
+            if (billItems.getElementsByTagName('tr').length === 0) {
+                alert('Please add items to the bill before generating a print preview.');
+                return;
+            }
+            
+            // Create a new window for print preview
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            
+            // Generate bill HTML
+            const billHtml = `
+                <html>
+                <head>
+                    <title>Bill Preview</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .bill-header { text-align: center; margin-bottom: 20px; }
+                        .bill-info { margin-bottom: 20px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                        .total-row { font-weight: bold; }
+                        .footer { margin-top: 30px; text-align: center; font-size: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="bill-header">
+                        <h1>Retail Management System</h1>
+                        <h2>Invoice</h2>
+                        <p>Bill Number: ${document.getElementById('bill_number_input').value}</p>
+                        <p>Date: ${document.getElementById('bill_date').value}</p>
+                    </div>
+                    
+                    <div class="bill-info">
+                        <p><strong>Customer:</strong> ${document.getElementById('customer').options[document.getElementById('customer').selectedIndex].text}</p>
+                        <p><strong>Payment Method:</strong> ${document.getElementById('payment_method').value}</p>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Array.from(billItems.getElementsByTagName('tr')).map(row => `
+                                <tr>
+                                    <td>${row.querySelector('.product-name').textContent}</td>
+                                    <td>${row.querySelector('.price').textContent}</td>
+                                    <td>${row.querySelector('.quantity').value}</td>
+                                    <td>${row.querySelector('.total').textContent}</td>
+                                </tr>
+                            `).join('')}
+                            <tr class="total-row">
+                                <td colspan="3">Subtotal:</td>
+                                <td>${document.getElementById('subtotal').textContent}</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td colspan="3">Tax (18%):</td>
+                                <td>${document.getElementById('tax').textContent}</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td colspan="3">Total:</td>
+                                <td>${document.getElementById('total').textContent}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="footer">
+                        <p>Thank you for your business!</p>
+                        <p>For any queries, please contact us at support@retailmanagementsystem.com</p>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            printWindow.document.open();
+            printWindow.document.write(billHtml);
+            printWindow.document.close();
+            
+            // Wait for content to load then print
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
+        });
+        
+        // Function to update totals with real-time calculations
+        function updateTotals() {
+            let subtotal = 0;
+            const rows = billItems.getElementsByTagName('tr');
+            let itemCount = rows.length;
+
+            for (let row of rows) {
+                const quantity = parseInt(row.querySelector('.quantity').value);
+                const price = parseFloat(row.querySelector('.price').textContent.replace('₹', ''));
+                const total = quantity * price;
+                row.querySelector('.total').textContent = '₹' + total.toFixed(2);
+                subtotal += total;
+            }
+
+            const tax = subtotal * 0.18;
+            const total = subtotal + tax;
+
+            // Update main table totals
+            document.getElementById('subtotal').textContent = '₹' + subtotal.toFixed(2);
+            document.getElementById('tax').textContent = '₹' + tax.toFixed(2);
+            document.getElementById('total').textContent = '₹' + total.toFixed(2);
+            
+            // Update summary panel
+            itemsCountEl.textContent = itemCount;
+            summarySubtotalEl.textContent = '₹' + subtotal.toFixed(2);
+            summaryTaxEl.textContent = '₹' + tax.toFixed(2);
+            summaryTotalEl.textContent = '₹' + total.toFixed(2);
+            
+            // Update hidden total amount field for form submission
+            document.getElementById('total_amount').value = total.toFixed(2);
+        }
+
+        // Function to add product to bill with enhanced UI feedback
+        function addProductToBill(product) {
+            // Check if product is already in the bill
+            const existingRow = billItems.querySelector(`input[name="product_id"][value="${product.id}"]`);
+            if (existingRow) {
+                const row = existingRow.closest('tr');
+                const quantityInput = row.querySelector('.quantity');
+                quantityInput.value = parseInt(quantityInput.value) + 1;
+                
+                // Highlight the row briefly to show it was updated
+                row.classList.add('bg-success', 'bg-opacity-25');
+                setTimeout(() => {
+                    row.classList.remove('bg-success', 'bg-opacity-25');
+                }, 1000);
+                
+                updateTotals();
+                return;
+            }
+
+            const newRow = billItemTemplate.content.cloneNode(true);
+
+            newRow.querySelector('input[name="product_id"]').value = product.id;
+            newRow.querySelector('.product-name').textContent = product.name;
+            newRow.querySelector('.product-sku').textContent = ' (' + product.sku + ')';
+            newRow.querySelector('.price').textContent = '₹' + product.price;
+
+            const quantityInput = newRow.querySelector('.quantity');
+            quantityInput.addEventListener('change', function() {
+                updateTotals();
+                // Validate quantity against stock
+                if (parseInt(this.value) > product.stock_quantity) {
+                    alert(`Only ${product.stock_quantity} units available in stock!`);
+                    this.value = product.stock_quantity;
+                    updateTotals();
+                }
+            });
+
+            // Fix the event listener for the remove button
+            const removeButton = newRow.querySelector('.remove-item');
+            removeButton.addEventListener('click', function() {
+                const row = this.closest('tr');
+                // Confirm deletion
+                if (confirm('Are you sure you want to remove this product from the bill?')) {
+                    // Add fade out animation
+                    row.style.transition = 'opacity 0.3s';
+                    row.style.opacity = '0';
+                    setTimeout(() => {
+                        row.parentNode.removeChild(row);
+                        updateTotals();
+                        // Show feedback message
+                        const feedbackDiv = document.createElement('div');
+                        feedbackDiv.className = 'alert alert-success alert-dismissible fade show';
+                        feedbackDiv.innerHTML = `
+                            <strong>Success!</strong> Product removed from bill.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        `;
+                        document.querySelector('.card-body').prepend(feedbackDiv);
+                        // Auto-dismiss after 3 seconds
+                        setTimeout(() => {
+                            feedbackDiv.remove();
+                        }, 3000);
+                    }, 300);
+                }
+            });
+
+            // Add with animation
+            const tr = document.createElement('tr');
+            tr.innerHTML = newRow.querySelector('tr').innerHTML;
+            tr.style.opacity = '0';
+            tr.style.transition = 'opacity 0.3s';
+            billItems.appendChild(tr);
+            
+            setTimeout(() => {
+                tr.style.opacity = '1';
+            }, 10);
+            
+            updateTotals();
+        }
+
+        // Function to display search results - simplified version
+        function displaySearchResults(products) {
+            // Clear previous results
+            searchResults.innerHTML = '';
+            
+            if (products.length === 0) {
+                searchResults.innerHTML = '<tr><td colspan="5" class="text-center">No products found</td></tr>';
+                return;
+            }
+            
+            // Show result count
+            const resultCount = document.createElement('tr');
+            resultCount.innerHTML = `
+                <td colspan="5" class="bg-light text-center py-2">
+                    <strong>Found ${products.length} products</strong>
+                </td>
+            `;
+            searchResults.appendChild(resultCount);
+            
+            // Display all products in a simple list
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                
+                // Check if product is out of stock
+                const isOutOfStock = product.stock_quantity <= 0;
+                
+                if (isOutOfStock) {
+                    row.classList.add('text-muted');
+                }
+                
+                row.innerHTML = `
+                    <td>
+                        <strong>${product.name}</strong>
+                        ${isOutOfStock ? '<span class="badge bg-danger ms-2">Out of stock</span>' : ''}
+                    </td>
+                    <td>${product.sku || 'ID-' + product.id}</td>
+                    <td>₹${parseFloat(product.price).toFixed(2)}</td>
+                    <td>${product.stock_quantity}</td>
+                    <td>
+                        <button class="btn btn-sm ${isOutOfStock ? 'btn-secondary' : 'btn-primary'} add-to-bill" 
+                                data-product-id="${product.id}"
+                                data-product-name="${product.name}"
+                                data-product-price="${product.price}"
+                                data-product-stock="${product.stock_quantity}"
+                                ${isOutOfStock ? 'disabled' : ''}>
+                            <i class="fas fa-plus me-1"></i> Add
+                        </button>
+                    </td>
+                `;
+                searchResults.appendChild(row);
+            });
+
+            // Add event listeners to the new buttons
+            document.querySelectorAll('.add-to-bill').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Create product object from data attributes instead of JSON
+                    const product = {
+                        id: this.dataset.productId,
+                        name: this.dataset.productName,
+                        price: parseFloat(this.dataset.productPrice),
+                        stock_quantity: parseInt(this.dataset.productStock)
+                    };
+                    
+                    // Add to bill
+                    addProductToBill(product);
+                    
+                    // Visual feedback
+                    this.innerHTML = '<i class="fas fa-check me-1"></i> Added';
+                    this.classList.remove('btn-primary');
+                    this.classList.add('btn-success');
+                    this.disabled = true;
+                });
+            });
+        }
+
+        // Function to show loading indicator
+        function showSearchLoading() {
+            searchResults.innerHTML = '<tr><td colspan="5" class="text-center"><div class="loading"></div> Searching products...</td></tr>';
+        }
+        
+        // Function to perform product search - ultra simple approach
+        function searchProducts(searchType, searchTerm) {
+            // Show loading indicator
+            searchResults.innerHTML = '<tr><td colspan="5" class="text-center"><div class="spinner-border text-primary" role="status"></div><br>Searching products...</td></tr>';
+            
+            // Build the URL based on search type
+            let url = '/billing/api/products/';
+            
+            if (searchType === 'all') {
+                // Just use the base URL to get all products
+            } else if (searchType === 'name' && searchTerm) {
+                url += `?search=${encodeURIComponent(searchTerm)}`;
+            } else if (searchType === 'id' && searchTerm) {
+                url += `?id=${encodeURIComponent(searchTerm)}`;
+            }
+            
+            console.log('Searching products with URL:', url);
+                
+            // Use jQuery for AJAX to avoid any potential fetch API issues
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    console.log('Search results:', data);
+                    if (data.products && data.products.length > 0) {
+                        displaySearchResults(data.products);
+                    } else {
+                        searchResults.innerHTML = `
+                            <tr>
+                                <td colspan="5" class="text-center">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        No products found
+                                    </div>
+                                </td>
+                            </tr>`;
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error searching products:', error);
+                    searchResults.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="alert alert-danger mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Error searching products. Please try again.
+                                </div>
+                            </td>
+                        </tr>`;
+                }
+            });
+        }
+
+        // Search by name event listener
+        searchByNameBtn.addEventListener('click', function () {
+            const searchTerm = nameSearch.value.trim();
+            searchProducts('name', searchTerm);
+        });
+        
+        // Search by name on Enter key
+        nameSearch.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const searchTerm = nameSearch.value.trim();
+                searchProducts('name', searchTerm);
+            }
+        });
+
+        // Search by ID event listener
+        searchBySkuBtn.addEventListener('click', function () {
+            const searchTerm = skuSearch.value.trim();
+            searchProducts('id', searchTerm);
+        });
+        
+        // Search by ID on Enter key
+        skuSearch.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const searchTerm = skuSearch.value.trim();
+                searchProducts('id', searchTerm);
+            }
+        });
+        
+        // Show All Products button (especially useful for employees)
+        document.getElementById('showAllProducts').addEventListener('click', function() {
+            // Show loading indicator
+            showSearchLoading();
+            // Fetch all products
+            searchProducts('all', '');
+        });
+
+        // Form submission
+        document.getElementById('billForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            // Collect all bill items
+            const items = [];
+            const rows = billItems.getElementsByTagName('tr');
+
+            for (let row of rows) {
+                const productId = row.querySelector('input[name="product_id"]').value;
+                const quantity = row.querySelector('.quantity').value;
+                items.push({
+                    product_id: productId,
+                    quantity: quantity
+                });
+            }
+
+            // Create the request data
+            const requestData = {
+                customer_id: document.getElementById('customer').value,
+                items: items,
+                payment_method: document.getElementById('payment_method').value,
+                payment_status: document.getElementById('payment_status').value,
+                notes: document.getElementById('notes').value
+            };
+
+            // Submit form
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(requestData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        alert(data.message || 'Error creating bill');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error creating bill');
+                });
+        });
+    });
+</script>
+{% endblock %}

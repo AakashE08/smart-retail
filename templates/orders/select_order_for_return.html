@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Select Order for Return{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Select Order for Return</h4>
+                </div>
+                <div class="card-body">
+                    {% if returnable_orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Order Number</th>
+                                    <th>Date</th>
+                                    <th>Total</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in returnable_orders %}
+                                <tr>
+                                    <td>{{ order.order_number }}</td>
+                                    <td>{{ order.order_date|date:"M d, Y" }}</td>
+                                    <td>₹{{ order.total_amount|floatformat:2 }}</td>
+                                    <td>
+                                        <a href="{% url 'orders:request_return' order_number=order.order_number %}"
+                                            class="btn btn-primary btn-sm">
+                                            Request Return
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                        <h5>No Returnable Orders</h5>
+                        <p class="text-muted">You don't have any delivered orders that can be returned.</p>
+                        <a href="{% url 'orders:my_orders' %}" class="btn btn-primary">
+                            View My Orders
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Bill Details - {{ bill.bill_number }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">Bill Details - {{ bill.bill_number }}</h3>
+                    <div>
+                        <button onclick="window.print()" class="btn btn-primary me-2">
+                            <i class="fas fa-print me-2"></i>Print Bill
+                        </button>
+                        <a href="{% url 'billing:bill_update' bill.id %}" class="btn btn-warning me-2">
+                            <i class="fas fa-edit me-2"></i>Edit
+                        </a>
+                        <a href="{% url 'billing:bill_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Bills
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Bill Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Customer Information</h5>
+                            <p class="mb-1"><strong>Name:</strong> {{ bill.customer.get_full_name }}</p>
+                            <p class="mb-1"><strong>Username:</strong> {{ bill.customer.username }}</p>
+                            <p class="mb-1"><strong>Email:</strong> {{ bill.customer.email }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Bill Information</h5>
+                            <p class="mb-1"><strong>Date:</strong> {{ bill.bill_date|date:"M d, Y H:i" }}</p>
+                            <p class="mb-1"><strong>Created by:</strong> {{ bill.created_by.get_full_name }}</p>
+                            <p class="mb-1"><strong>Payment Method:</strong> {{ bill.get_payment_method_display }}</p>
+                            <p class="mb-1">
+                                <strong>Payment Status:</strong>
+                                <span class="badge bg-{{ bill.payment_status_color }}">
+                                    {{ bill.get_payment_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Bill Items -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Discount</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>
+                                        {{ item.product.name }}
+                                        <small class="text-muted d-block">{{ item.product.sku }}</small>
+                                    </td>
+                                    <td>₹{{ item.unit_price }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ item.discount_percentage }}%</td>
+                                    <td>₹{{ item.total_price }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Sub Total:</strong></td>
+                                    <td>₹{{ bill.sub_total }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Discount:</strong></td>
+                                    <td>₹{{ bill.discount_amount }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Tax:</strong></td>
+                                    <td>₹{{ bill.tax }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Total Amount:</strong></td>
+                                    <td><strong>₹{{ bill.total_amount }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    {% if bill.notes %}
+                    <div class="mt-4">
+                        <h5>Notes</h5>
+                        <p class="text-muted">{{ bill.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'billing:billing_dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .card-title {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+    }
+
+    .badge {
+        padding: 0.5em 0.75em;
+        font-weight: 500;
+    }
+
+    .table tfoot tr:last-child td {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

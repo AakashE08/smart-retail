@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Shop{% endblock %}
+
+{% block content %}
+<style>
+    .card {
+        transition: transform 0.3s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    
+    /* Pagination styles */
+    .pagination {
+        margin-top: 2rem;
+    }
+
+    .page-link {
+        color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+        padding: 0.5rem 1rem;
+        margin: 0 0.25rem;
+        border-radius: 0.25rem;
+    }
+
+    .page-item.active .page-link {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+    }
+
+    .page-item:not(.active) .page-link:hover {
+        background-color: rgba(var(--primary-color-rgb), 0.1);
+    }
+
+    .page-item.disabled .page-link {
+        color: #6c757d;
+        pointer-events: none;
+        background-color: #fff;
+        border-color: #dee2e6;
+    }
+</style>
+<div class="container py-4">
+    <!-- Cart Link -->
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{% url 'orders:view_cart' %}" class="btn btn-outline-primary">
+            <i class="fas fa-shopping-cart"></i>
+            Cart
+            {% if cart_count %}
+            <span class="badge bg-primary">{{ cart_count }}</span>
+            {% endif %}
+        </a>
+    </div>
+
+    <!-- Debug Info -->
+    {% if debug %}
+    <div class="alert alert-info mb-4">
+        <h5>Debug Information:</h5>
+        <p>Total Products: {{ page_obj.paginator.count }}</p>
+        <p>Current Page: {{ page_obj.number }}</p>
+        <p>Categories: {{ categories_with_subs|length }}</p>
+    </div>
+    {% endif %}
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1>Shop</h1>
+            <p class="text-muted">Browse our collection of products</p>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex justify-content-end align-items-center">
+                <div class="me-3">
+                    <select class="form-select" id="sort" onchange="applySort(this.value)">
+                        <option value="name" {% if sort == 'name' %}selected{% endif %}>Sort by Name</option>
+                        <option value="price_low" {% if sort == 'price_low' %}selected{% endif %}>Price: Low to High </option>
+                        <option value="price_high" {% if sort == 'price_high' %}selected{% endif %}>Price: High to Low </option>
+                        <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest First</option>
+                    </select>
+                </div>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary" onclick="toggleView('grid')">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="toggleView('list')">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Filters</h5>
+                    <form method="GET" id="filter-form">
+                        <!-- Search -->
+                        <div class="mb-3">
+                            <label class="form-label">Search</label>
+                            <input type="text" class="form-control" name="q" placeholder="Search products..."
+                                value="{{ query }}">
+                        </div>
+
+                        <!-- Categories -->
+                        <div class="mb-3">
+                            <label class="form-label">Categories</label>
+                            <select name="category" class="form-select">
+                                <option value="">All Categories</option>
+                                {% for cat_group in categories_with_subs %}
+                                <option value="{{ cat_group.main.id }}" {% if category == cat_group.main.id|stringformat:'i' %}selected{% endif %}>
+                                    {{cat_group.main.name }}</option>
+                                {% for sub in cat_group.subs %}
+                                <option value="{{ sub.id }}" {% if category == sub.id|stringformat:'i' %}selected{% endif%}>&nbsp;&nbsp;&nbsp;{{ sub.name }}</option>
+                                {% endfor %}
+                                {% endfor %}
+                            </select>
+
+                        </div>
+
+                        <!-- Price Range -->
+                        <div class="mb-3">
+                            <label class="form-label">Price Range</label>
+                            <div class="input-group mb-2">
+                                <input type="number" class="form-control" name="min_price" placeholder="Min"
+                                    value="{{ min_price }}">
+                                <span class="input-group-text">-</span>
+                                <input type="number" class="form-control" name="max_price" placeholder="Max"
+                                    value="{{ max_price }}">
+                            </div>
+                        </div>
+
+                        <!-- Stock Status -->
+                        <div class="mb-3">
+                            <label class="form-label">Stock Status</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="in_stock" id="in_stock" {% if in_stock %} checked{% endif %}>
+                                <label class="form-check-label" for="in_stock">
+                                    In Stock Only
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Hidden sort field -->
+                        <input type="hidden" name="sort" value="{{ sort }}">
+
+                        <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                        {% if request.GET %}
+                        <a href="{% url 'orders:customer_shop' %}" class="btn btn-outline-secondary w-100 mt-2">
+                            Clear Filters
+                        </a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="col-md-9">
+            <div class="row" id="products-container">
+                {% for product in page_obj %}
+                <div class="col-md-4 mb-4 product-item">
+                    <div class="card h-100">
+                        <div class="position-relative">
+                            {% if product.image %}
+                            <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}"
+                                style="height: 200px; object-fit: cover;">
+                            {% else %}
+                            <img src="{% static 'images/no-image.png' %}" class="card-img-top" alt="No image"
+                                style="height: 200px; object-fit: cover;">
+                            {% endif %}
+                            {% if product.stock_quantity == 0 %}
+                            <div class="position-absolute top-0 end-0 m-2">
+                                <span class="badge bg-danger">Out of Stock</span>
+                            </div>
+                            {% elif product.stock_quantity <= product.reorder_level %} <div
+                                class="position-absolute top-0 end-0 m-2">
+                                <span class="badge bg-warning">Low Stock</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text text-muted">{{ product.description|truncatechars:100 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 text-primary">₹{{ product.price|floatformat:2 }}</h6>
+                            {% if product.stock_quantity > 0 %}
+                            <form action="{% url 'orders:add_to_cart' product.id %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-cart-plus"></i> Add to Cart
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'orders:product_detail' product.id %}"
+                            class="btn btn-outline-secondary btn-sm w-100">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-search fa-4x text-muted mb-3"></i>
+                <h3>No products found</h3>
+                <p class="text-muted">Try adjusting your filters or search criteria</p>
+                <a href="{% url 'orders:customer_shop' %}" class="btn btn-primary">Clear Filters</a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if sort %}&sort={{ sort }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if query %}&q={{ query }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if in_stock %}&in_stock=on{% endif %}" aria-label="Previous">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num == 1 or num == page_obj.paginator.num_pages or num|add:'-2' <= page_obj.number and num|add:'2' >= page_obj.number %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if sort %}&sort={{ sort }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if query %}&q={{ query }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if in_stock %}&in_stock=on{% endif %}">{{ num }}</a>
+                        </li>
+                    {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+                        <li class="page-item disabled">
+                            <span class="page-link">&hellip;</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if sort %}&sort={{ sort }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if query %}&q={{ query }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if in_stock %}&in_stock=on{% endif %}" aria-label="Next">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleView(view) {
+        const container = document.getElementById('products-container');
+        const products = container.getElementsByClassName('product-item');
+        localStorage.setItem('shopView', view);
+
+        if (view === 'list') {
+            container.classList.add('list-view');
+            for (let product of products) {
+                product.classList.remove('col-md-4');
+                product.classList.add('col-12');
+            }
+        } else {
+            container.classList.remove('list-view');
+            for (let product of products) {
+                product.classList.remove('col-12');
+                product.classList.add('col-md-4');
+            }
+        }
+    }
+
+    function applySort(value) {
+        const form = document.getElementById('filter-form');
+        form.querySelector('input[name="sort"]').value = value;
+        form.submit();
+    }
+
+    // Initialize view based on localStorage
+    document.addEventListener('DOMContentLoaded', function () {
+        const savedView = localStorage.getItem('shopView') || 'grid';
+        toggleView(savedView);
+    });
+</script>
+
+<style>
+    .list-view .card {
+        flex-direction: row;
+    }
+
+    .list-view .card-img-top {
+        width: 200px;
+        height: 200px;
+        object-fit: cover;
+    }
+
+    .list-view .card-body {
+        flex: 1;
+    }
+
+    .card-img-top {
+        height: 200px;
+        object-fit: cover;
+    }
+</style>
+{% endblock %}

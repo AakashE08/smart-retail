@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Return Request #{{ return_request.id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Return Request #{{ return_request.id }}</h5>
+                    <span class="badge {{ return_request.get_status_badge_class }}">
+                        {{ return_request.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Order Information</h6>
+                            <dl class="row">
+                                <dt class="col-sm-4">Order Number</dt>
+                                <dd class="col-sm-8">{{ return_request.order.order_number }}</dd>
+
+                                <dt class="col-sm-4">Order Date</dt>
+                                <dd class="col-sm-8">{{ return_request.order.order_date|date:"M d, Y" }}</dd>
+
+                                <dt class="col-sm-4">Order Status</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge {% if return_request.order.status == 'DELIVERED' %}bg-success
+                                                     {% elif return_request.order.status == 'CANCELLED' %}bg-danger
+                                                     {% elif return_request.order.status == 'PENDING' %}bg-warning
+                                                     {% else %}bg-info{% endif %}">
+                                        {{ return_request.order.get_status_display }}
+                                    </span>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Return Information</h6>
+                            <dl class="row">
+                                <dt class="col-sm-4">Return Reason</dt>
+                                <dd class="col-sm-8">{{ return_request.get_reason_display }}</dd>
+
+                                <dt class="col-sm-4">Description</dt>
+                                <dd class="col-sm-8">{{ return_request.description }}</dd>
+
+                                <dt class="col-sm-4">Request Date</dt>
+                                <dd class="col-sm-8">{{ return_request.created_at|date:"M d, Y" }}</dd>
+
+                                <dt class="col-sm-4">Last Updated</dt>
+                                <dd class="col-sm-8">{{ return_request.updated_at|date:"M d, Y" }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    {% if return_request.admin_notes %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6>Admin Notes</h6>
+                            <div class="alert alert-info">
+                                {{ return_request.admin_notes }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <a href="{% url 'returns:return_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to List
+                            </a>
+                            {% if return_request.status == 'PENDING' %}
+                            <a href="{% url 'returns:return_update' return_request.pk %}" class="btn btn-warning">
+                                <i class="fas fa-edit me-2"></i>Edit
+                            </a>
+                            <a href="{% url 'returns:return_delete' return_request.pk %}" class="btn btn-danger">
+                                <i class="fas fa-trash me-2"></i>Delete
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

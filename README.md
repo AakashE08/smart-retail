@@ -1,38 +1,132 @@
-# Smart Invoice Validation - Prototype
+# Retail Shop Management System
 
-This directory contains the prototype deliverables for the **Smart Invoice Validation & Fraud Detection Platform**. It provides functional code elements and DevOps configuration suitable for a 2nd review presentation.
+A comprehensive retail shop management system built with Django and MySQL.
 
-## Directory Structure
-- `backend/` - Contains the Express.js based API handling invoice registration and QR-code-based verification workflows.
-- `Jenkinsfile` - The proposed CI/CD pipeline definition as requested.
-- `../Smart_Invoice_Validation_Platform_Report.md` - The detailed architecture & theoretical design project document.
+## Features
 
-## How to Run the Backend Prototype:
+- 🔐 Role-based access control (Admin, Employee, Customer)
+- 🧾 Billing and invoice generation
+- 📦 Inventory management with alerts
+- 🛒 Online order portal
+- 📊 Sales and inventory reports
+- 🎁 Promotions and discounts
+- 🔄 Product returns and refunds
+- 📱 Responsive web interface
 
-1. Ensure you have Node.js installed.
-2. Navigate to the `backend/` directory using your terminal.
-3. Run `npm install` to setup the Express framework and QR Code generation dependencies.
-4. Run `npm start` to spin up the local application server.
+## Tech Stack
 
-### Demonstrating the Platform Applications:
+- Backend: Django (Python)
+- Database: MySQL
+- Frontend: Django Templates with Bootstrap
+- Additional: ReportLab (PDF generation)
 
-**Application 1: Mimicking the Billing Software Plugin**
-From your REST client (Postman/cURL), simulate a new invoice being generated:
-- **POST** to `http://localhost:3000/api/invoice/register`
-- **Payload:**
-    ```json
-    {
-       "invoiceId": "INV-1002",
-       "sellerGst": "29ABCDE1234F1Z5",
-       "totalAmount": 1500,
-       "gstAmount": 270,
-       "products": ["Processor", "Motherboard"]
-    }
-    ```
-The server will respond with a unique tracking ID and a Base-64 Data URI containing the generated QR Code to print on the physical bill.
+## Installation
 
-**Application 2: Mimicking the Verification Scanner Algorithm**
-Take the `verificationUrl` property returned by the previous request and put it into your browser or fire a `GET` request.
-- **GET** `http://localhost:3000/api/invoice/verify/<INSERT-REFERENCE-NUMBER-HERE>`
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/retail-management.git
+cd retail-management
+```
 
-The scanner will immediately report if the invoice is an authentic record matching the central database, or an invalid, potentially fraudulent fake.
+2. Create and activate a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Configure MySQL:
+- Create a new MySQL database
+- Update database settings in `retail_management/settings.py`
+
+5. Run migrations:
+```bash
+python manage.py migrate
+```
+
+6. Initialize MySQL operations:
+```bash
+python manage.py initialize_mysql
+```
+
+7. Create a superuser:
+```bash
+python manage.py createsuperuser
+```
+
+8. Run the development server:
+```bash
+python manage.py runserver
+```
+
+## Project Structure
+
+```
+retail_management/
+├── accounts/           # User authentication and profiles
+├── inventory/          # Product and stock management
+├── orders/            # Order processing
+├── billing/           # Billing and invoicing
+├── returns/           # Returns and refunds
+├── promotions/        # Discounts and promotions
+├── reports/           # Sales and inventory reports
+└── retail_management/ # Project settings
+```
+
+## Key Features Implementation
+
+### Database Operations
+- MySQL Views for inventory summary
+- Triggers for automatic inventory updates
+- Cursors for batch processing
+- Complex joins for reports
+
+### Security
+- Role-based access control
+- Secure password hashing
+- Session management
+- CSRF protection
+
+### Automation
+- Low stock alerts
+- Expiry date notifications
+- Automatic inventory updates
+- Sales reports generation
+
+## Usage
+
+1. **Admin Access**
+   - Manage users and roles
+   - Configure system settings
+   - View all reports and analytics
+
+2. **Employee Access**
+   - Process bills and orders
+   - Manage inventory
+   - Handle returns and refunds
+
+3. **Customer Access**
+   - Browse products
+   - Place orders
+   - View order history
+   - Request returns
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For support, email support@example.com or create an issue in the repository. 

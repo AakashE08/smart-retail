@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ discount.code }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Discount Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4>{{ discount.code }}</h4>
+                            <p class="text-muted">{{ discount.description }}</p>
+                            <hr>
+                            <dl class="row">
+                                <dt class="col-sm-4">Discount</dt>
+                                <dd class="col-sm-8">{{ discount.discount_percentage }}%</dd>
+
+                                <dt class="col-sm-4">Start Date</dt>
+                                <dd class="col-sm-8">{{ discount.start_date }}</dd>
+
+                                <dt class="col-sm-4">End Date</dt>
+                                <dd class="col-sm-8">{{ discount.end_date }}</dd>
+
+                                <dt class="col-sm-4">Status</dt>
+                                <dd class="col-sm-8">
+                                    {% if discount.is_current %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{% url 'promotions:discount_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to List
+                        </a>
+                        {% if user.role == 'admin' %}
+                        <a href="{% url 'promotions:discount_update' discount.pk %}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Edit
+                        </a>
+                        <a href="{% url 'promotions:discount_delete' discount.pk %}" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Delete
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

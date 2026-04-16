@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Welcome to your Dashboard, {{ user.username }}!</h1>
+
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Quick Actions</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'accounts:profile' %}" class="btn btn-outline-primary btn-sm mb-2">View
+                                Profile</a></li>
+                        <li><a href="{% url 'accounts:profile_edit' %}" class="btn btn-outline-primary btn-sm mb-2">Edit
+                                Profile</a></li>
+                        <li><a href="{% url 'accounts:password_change' %}"
+                                class="btn btn-outline-primary btn-sm mb-2">Change Password</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Recent Activity</h5>
+                    <p class="card-text">Your recent activity will appear here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

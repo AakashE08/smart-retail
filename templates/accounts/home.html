@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Welcome to Retail Management System{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4 mb-4">Welcome to Retail Management System</h1>
+            <p class="lead mb-5">Streamline your retail operations with our comprehensive management solution</p>
+
+            {% if user.is_authenticated %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h4 mb-3">Welcome back, {{ user.get_full_name|default:user.username }}!</h2>
+                    <p class="mb-4">You are logged in as {{ user.get_role_display }}.</p>
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                        Go to Dashboard
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h3 class="h5 mb-3">Customer</h3>
+                            <p class="mb-4">Shop and manage your orders</p>
+                            <a href="{% url 'login' %}?next={% url 'dashboard' %}" class="btn btn-outline-primary">
+                                Customer Login
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h3 class="h5 mb-3">Employee</h3>
+                            <p class="mb-4">Manage orders and inventory</p>
+                            <a href="{% url 'login' %}?next={% url 'dashboard' %}" class="btn btn-outline-primary">
+                                Employee Login
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-shopping-cart fa-3x mb-3 text-primary"></i>
+                    <h3 class="h5">Easy Order Management</h3>
+                    <p>Streamline your ordering process with our intuitive interface</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-boxes fa-3x mb-3 text-primary"></i>
+                    <h3 class="h5">Inventory Control</h3>
+                    <p>Keep track of your stock levels in real-time</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-3x mb-3 text-primary"></i>
+                    <h3 class="h5">Sales Analytics</h3>
+                    <p>Get insights into your business performance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        transition: transform 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+    .btn-outline-primary {
+        border-width: 2px;
+    }
+
+    .display-4 {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .lead {
+        color: #7f8c8d;
+    }
+</style>
+{% endblock %}

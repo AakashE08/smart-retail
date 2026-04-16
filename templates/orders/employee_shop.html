@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Employee Shop{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3">Employee Shop</h1>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'create_order' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Order
+            </a>
+        </div>
+    </div>
+
+    <!-- Debug Info -->
+    {% if debug %}
+    <div class="alert alert-info">
+        <h5>Debug Information:</h5>
+        <p>Total Products: {{ page_obj.paginator.count }}</p>
+        <p>Current Page: {{ page_obj.number }}</p>
+        <p>Categories: {{ categories|length }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="q" class="form-control" placeholder="Search products..."
+                        value="{{ query }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if category==cat.id|stringformat:"i" %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="stock_status" class="form-select">
+                        <option value="">All Stock</option>
+                        <option value="low" {% if stock_status=='low' %}selected{% endif %}>Low Stock</option>
+                        <option value="out" {% if stock_status=='out' %}selected{% endif %}>Out of Stock</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="sort" class="form-select">
+                        <option value="">Sort By</option>
+                        <option value="name" {% if sort=='name' %}selected{% endif %}>Name</option>
+                        <option value="price_low" {% if sort=='price_low' %}selected{% endif %}>Price: Low to High
+                        </option>
+                        <option value="price_high" {% if sort=='price_high' %}selected{% endif %}>Price: High to Low
+                        </option>
+                        <option value="stock_low" {% if sort=='stock_low' %}selected{% endif %}>Stock: Low to High
+                        </option>
+                        <option value="stock_high" {% if sort=='stock_high' %}selected{% endif %}>Stock: High to Low
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="{% url 'employee_shop' %}" class="btn btn-secondary">Clear Filters</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="row">
+        {% for product in page_obj %}
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <p class="card-text">
+                        <small class="text-muted">SKU: {{ product.sku }}</small><br>
+                        <strong>Price:</strong> ₹{{ product.price }}<br>
+                        <strong>Stock:</strong> {{ product.quantity }}
+                        {% if product.quantity <= product.reorder_level %} <span class="badge bg-warning">Low
+                            Stock</span>
+                            {% endif %}
+                    </p>
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'customer_product_detail' product.id %}" class="btn btn-sm btn-info">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        <a href="{% url 'create_order' %}?product={{ product.id }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-shopping-cart"></i> Add to Order
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                No products found matching your criteria.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link"
+                    href="?page=1{% if query %}&q={{ query }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link"
+                    href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">Previous</a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <li class="page-item">
+                <a class="page-link"
+                    href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">{{
+                    num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">Last</a>
+                </li>
+                {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-6">
+            {% if product.image %}
+            <img src="{{ product.image.url }}" class="img-fluid rounded" alt="{{ product.name }}">
+            {% else %}
+            <img src="{% static 'images/no-image.png' %}" class="img-fluid rounded" alt="No image">
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <h1 class="mb-3">{{ product.name }}</h1>
+            <p class="text-muted mb-4">{{ product.description }}</p>
+
+            <div class="mb-4">
+                <h3 class="text-primary">₹{{ product.price|floatformat:2 }}</h3>
+                {% if product.stock > 0 %}
+                <span class="badge bg-success">In Stock ({{ product.stock }} available)</span>
+                {% else %}
+                <span class="badge bg-danger">Out of Stock</span>
+                {% endif %}
+            </div>
+
+            {% if product.stock > 0 %}
+            <form method="POST" action="{% url 'add_to_cart' product.id %}" class="mb-4">
+                {% csrf_token %}
+                <div class="input-group mb-3" style="max-width: 200px;">
+                    <input type="number" name="quantity" class="form-control" value="1" min="1"
+                        max="{{ product.stock }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-cart-plus me-2"></i>Add to Cart
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Product Details</h5>
+                    <ul class="list-unstyled">
+                        <li><strong>SKU:</strong> {{ product.sku }}</li>
+                        <li><strong>Category:</strong> {{ product.category.name }}</li>
+                        <li><strong>Brand:</strong> {{ product.brand }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Quantity validation
+    document.getElementById('quantity').addEventListener('change', function (e) {
+        let value = parseInt(e.target.value);
+        let max = parseInt(e.target.max);
+        let min = parseInt(e.target.min);
+
+        if (value > max) {
+            e.target.value = max;
+        } else if (value < min) {
+            e.target.value = min;
+        }
+    });
+</script>
+{% endblock %}

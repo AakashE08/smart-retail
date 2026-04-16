@@ -1,0 +1,304 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inventory Report - Retail Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Inventory Report</h1>
+        <div>
+            <button type="button" class="btn btn-outline-primary me-2" id="printReport">
+                <i class="fas fa-print me-2"></i>Print
+            </button>
+            <button type="button" class="btn btn-outline-success" id="exportReport">
+                <i class="fas fa-file-excel me-2"></i>Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="category" class="form-label">Category</label>
+                    <select name="category" id="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if selected_category == category.id %}selected{% endif %}>{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="stock_status" class="form-label">Stock Status</label>
+                    <select name="stock_status" id="stock_status" class="form-select">
+                        <option value="" {% if stock_status == '' %}selected{% endif %}>All</option>
+                        <option value="low" {% if stock_status == 'low' %}selected{% endif %}>Low Stock</option>
+                        <option value="out" {% if stock_status == 'out' %}selected{% endif %}>Out of Stock</option>
+                        <option value="normal" {% if stock_status == 'normal' %}selected{% endif %}>Normal</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" name="search" id="search" class="form-control" placeholder="Product name"
+                        value="{{ search_query }}">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total Products</h6>
+                            <h2 class="mt-2 mb-0">{{ total_products }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-boxes fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Low Stock Items</h6>
+                            <h2 class="mt-2 mb-0">{{ low_stock_count }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-exclamation-triangle fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Out of Stock</h6>
+                            <h2 class="mt-2 mb-0">{{ out_of_stock_count }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-ban fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Inventory Value</h6>
+                            <h2 class="mt-2 mb-0">u20b9{{ inventory_value }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-rupee-sign fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Data Table -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <h5 class="card-title mb-0">Inventory Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Stock Quantity</th>
+                            <th>Reorder Level</th>
+                            <th>Status</th>
+                            <th class="text-end">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'inventory:product_detail' product.id %}">{{ product.name }}</a>
+                            </td>
+                            <td>{{ product.category.name }}</td>
+                            <td>u20b9{{ product.price }}</td>
+                            <td>{{ product.stock_quantity }}</td>
+                            <td>{{ product.reorder_level }}</td>
+                            <td>
+                                {% if product.stock_quantity == 0 %}
+                                <span class="badge bg-danger">Out of Stock</span>
+                                {% elif product.is_low_stock %}
+                                <span class="badge bg-warning">Low Stock</span>
+                                {% else %}
+                                <span class="badge bg-success">In Stock</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">u20b9{{ product.inventory_value }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="fas fa-boxes fa-3x text-muted mb-3"></i>
+                                <p class="mb-0">No products found for the selected filters.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if products.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- Previous Page -->
+                    {% if products.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ products.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}" aria-label="Previous">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+                    </li>
+                    {% endif %}
+
+                    <!-- First Page -->
+                    {% if products.number > 3 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}">1</a>
+                    </li>
+                    {% if products.number > 4 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+
+                    <!-- Current Page and Surrounding Pages -->
+                    {% for i in products.paginator.page_range %}
+                        {% if i > products.number|add:"-2" and i < products.number|add:"2" %}
+                        <li class="page-item {% if products.number == i %}active{% endif %}">
+                            <a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}">{{ i }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Last Page -->
+                    {% if products.number < products.paginator.num_pages|add:"-2" %}
+                    {% if products.number < products.paginator.num_pages|add:"-3" %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ products.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}">{{ products.paginator.num_pages }}</a>
+                    </li>
+                    {% endif %}
+
+                    <!-- Next Page -->
+                    {% if products.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ products.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}" aria-label="Next">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Stock Movements -->
+    <div class="card mt-4">
+        <div class="card-header bg-white">
+            <h5 class="card-title mb-0">Recent Stock Movements</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Product</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Reference</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for movement in stock_movements %}
+                        <tr>
+                            <td>{{ movement.created_at|date:"M d, Y H:i" }}</td>
+                            <td>{{ movement.product.name }}</td>
+                            <td>
+                                {% if movement.movement_type == 'in' %}
+                                <span class="badge bg-success">Stock In</span>
+                                {% else %}
+                                <span class="badge bg-danger">Stock Out</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ movement.quantity }}</td>
+                            <td>{{ movement.reference|default:"-" }}</td>
+                            <td>{{ movement.notes|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+                                <p class="mb-0">No stock movements found.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Print report functionality
+        document.getElementById('printReport').addEventListener('click', function() {
+            window.print();
+        });
+        
+        // Export report functionality (placeholder)
+        document.getElementById('exportReport').addEventListener('click', function() {
+            alert('Export functionality will be implemented soon.');
+        });
+    });
+</script>
+{% endblock %}

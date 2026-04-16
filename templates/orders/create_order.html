@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create New Order{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quantity-input {
+        width: 80px !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Create New Order</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="orderForm" action="{% url 'orders:create_order' %}">
+                        {% csrf_token %}
+
+                        <!-- Customer Search and Selection -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" id="customerSearch"
+                                        placeholder="Search customers by name, email or phone">
+                                    <button class="btn btn-outline-secondary" type="button" id="searchCustomer">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                                <div id="customerResults" class="list-group" style="display: none;">
+                                    <!-- Customer results will be populated here -->
+                                </div>
+                                <div class="mt-2">
+                                    <label for="selectedCustomer" class="form-label">Selected Customer</label>
+                                    <input type="text" class="form-control" id="selectedCustomer" readonly>
+                                    <input type="hidden" name="customer" id="customerId">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product Search -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" id="productNameSearch"
+                                        placeholder="Search products by name">
+                                    <button class="btn btn-outline-secondary" type="button" id="searchProductName">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" id="productSkuSearch"
+                                        placeholder="Search products by SKU">
+                                    <button class="btn btn-outline-secondary" type="button" id="searchProductSku">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="productResults" class="list-group mb-3" style="display: none;">
+                            <!-- Product results will be populated here -->
+                        </div>
+
+                        <!-- Order Items Table -->
+                        <div class="table-responsive mb-4">
+                            <table class="table table-hover" id="orderItems">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>SKU</th>
+                                        <th>Price</th>
+                                        <th>Quantity</th>
+                                        <th>Total</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Order items will be added here dynamically -->
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>Subtotal:</strong></td>
+                                        <td id="subtotal">₹0.00</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>Tax (18%):</strong></td>
+                                        <td id="tax">₹0.00</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                                        <td id="total">₹0.00</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- Shipping Information -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="shipping_address" class="form-label">Shipping Address</label>
+                                <textarea class="form-control" id="shipping_address" name="shipping_address" rows="3"
+                                    required></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="contact_phone" class="form-label">Contact Phone</label>
+                                <input type="tel" class="form-control" id="contact_phone" name="contact_phone" required>
+                            </div>
+                        </div>
+
+                        <!-- Payment Information -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="payment_method" class="form-label">Payment Method</label>
+                                <select class="form-select" id="payment_method" name="payment_method" required>
+                                    <option value="COD">Cash On Delivery</option>
+                                    <option value="ONLINE">Online Payment</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="payment_status" class="form-label">Payment Status</label>
+                                <select class="form-select" id="payment_status" name="payment_status" required>
+                                    <option value="PENDING">Pending</option>
+                                    <option value="PAID">Paid</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'orders:order_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Orders
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitOrder">
+                                <i class="fas fa-save me-2"></i>Create Order
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden template for order items -->
+<template id="orderItemTemplate">
+    <tr>
+        <td>
+            <input type="hidden" name="product_id" value="">
+            <span class="product-name"></span>
+        </td>
+        <td class="product-sku"></td>
+        <td class="price">₹0.00</td>
+        <td>
+            <input type="number" class="form-control form-control-sm quantity" value="1" min="1" style="width: 80px;">
+        </td>
+        <td class="total">₹0.00</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-danger remove-item">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    </tr>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Add Decimal.js for precise calculations -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/decimal.js/10.4.3/decimal.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const orderItems = document.getElementById('orderItems').getElementsByTagName('tbody')[0];
+        const customerSearch = document.getElementById('customerSearch');
+        const searchCustomerBtn = document.getElementById('searchCustomer');
+        const customerResults = document.getElementById('customerResults');
+        const selectedCustomer = document.getElementById('selectedCustomer');
+        const customerId = document.getElementById('customerId');
+        const productNameSearch = document.getElementById('productNameSearch');
+        const productSkuSearch = document.getElementById('productSkuSearch');
+        const searchProductNameBtn = document.getElementById('searchProductName');
+        const searchProductSkuBtn = document.getElementById('searchProductSku');
+        const productResults = document.getElementById('productResults');
+        const orderItemTemplate = document.getElementById('orderItemTemplate');
+        const submitOrderBtn = document.getElementById('submitOrder');
+
+        // Function to update totals
+        function updateTotals() {
+            let subtotal = new Decimal('0');
+            const rows = orderItems.getElementsByTagName('tr');
+
+            for (let row of rows) {
+                const totalCell = row.querySelector('.total');
+                if (totalCell) {
+                    const total = new Decimal(totalCell.textContent.replace('₹', ''));
+                    subtotal = subtotal.plus(total);
+                }
+            }
+
+            const taxRate = new Decimal('0.18');
+            const tax = subtotal.times(taxRate).round(2);
+            const total = subtotal.plus(tax);
+
+            document.getElementById('subtotal').textContent = '₹' + subtotal.toFixed(2);
+            document.getElementById('tax').textContent = '₹' + tax.toFixed(2);
+            document.getElementById('total').textContent = '₹' + total.toFixed(2);
+        }
+
+        // Function to search customers
+        function searchCustomers() {
+            const searchTerm = customerSearch.value.trim();
+            if (searchTerm) {
+                fetch(`{% url 'orders:search_customers' %}?search=${encodeURIComponent(searchTerm)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        customerResults.innerHTML = '';
+                        if (data.length > 0) {
+                            data.forEach(customer => {
+                                const item = document.createElement('a');
+                                item.href = '#';
+                                item.className = 'list-group-item list-group-item-action';
+                                item.innerHTML = `
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <strong>${customer.name}</strong><br>
+                                            <small>${customer.email} | ${customer.phone}</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-primary select-customer" 
+                                            data-id="${customer.id}" 
+                                            data-name="${customer.name}">
+                                            Select
+                                        </button>
+                                    </div>
+                                `;
+                                customerResults.appendChild(item);
+                            });
+                            customerResults.style.display = 'block';
+                        } else {
+                            customerResults.innerHTML = '<div class="list-group-item">No customers found</div>';
+                            customerResults.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error searching customers');
+                    });
+            }
+        }
+
+        // Function to search products
+        function searchProducts(searchTerm, searchBy) {
+            if (searchTerm) {
+                fetch(`{% url 'orders:search_products' %}?${searchBy}=${encodeURIComponent(searchTerm)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        productResults.innerHTML = '';
+                        if (data.length > 0) {
+                            data.forEach(product => {
+                                const item = document.createElement('a');
+                                item.href = '#';
+                                item.className = 'list-group-item list-group-item-action';
+                                item.innerHTML = `
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>${product.name}</strong><br>
+                                            <small>SKU: ${product.sku} | Price: ₹${product.price.toFixed(2)} | Stock: ${product.quantity}</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-primary add-product" 
+                                            data-id="${product.id}" 
+                                            data-name="${product.name}"
+                                            data-sku="${product.sku}"
+                                            data-price="${product.price}"
+                                            data-max="${product.quantity}">
+                                            Add
+                                        </button>
+                                    </div>
+                                `;
+                                productResults.appendChild(item);
+                            });
+                            productResults.style.display = 'block';
+                        } else {
+                            productResults.innerHTML = '<div class="list-group-item">No products found</div>';
+                            productResults.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error searching products');
+                    });
+            }
+        }
+
+        // Function to add product to order
+        function addProductToOrder(product) {
+            // Check if product already exists in order
+            const existingRow = Array.from(orderItems.getElementsByTagName('tr')).find(row => {
+                return row.querySelector('input[name="product_id"]').value === product.id;
+            });
+
+            if (existingRow) {
+                // Update quantity if product exists
+                const quantityInput = existingRow.querySelector('.quantity');
+                const currentQty = parseInt(quantityInput.value);
+                const maxQty = parseInt(product.max);
+                if (currentQty < maxQty) {
+                    quantityInput.value = currentQty + 1;
+                    // Trigger change event to update total
+                    const event = new Event('change');
+                    quantityInput.dispatchEvent(event);
+                } else {
+                    alert('Maximum available quantity reached for this product');
+                }
+                return;
+            }
+
+            const newRow = orderItemTemplate.content.cloneNode(true);
+            const row = newRow.querySelector('tr');
+
+            // Convert price to Decimal for calculations
+            const price = new Decimal(product.price);
+
+            newRow.querySelector('input[name="product_id"]').value = product.id;
+            newRow.querySelector('.product-name').textContent = product.name;
+            newRow.querySelector('.product-sku').textContent = product.sku;
+            newRow.querySelector('.price').textContent = '₹' + price.toFixed(2);
+
+            const quantityInput = newRow.querySelector('.quantity');
+            quantityInput.max = product.max;
+            quantityInput.addEventListener('change', function () {
+                const quantity = new Decimal(this.value);
+                if (parseInt(this.value) > parseInt(product.max)) {
+                    this.value = product.max;
+                    alert('Quantity cannot exceed available stock');
+                }
+                const total = price.times(new Decimal(this.value));
+                this.closest('tr').querySelector('.total').textContent = '₹' + total.toFixed(2);
+                updateTotals();
+            });
+
+            newRow.querySelector('.remove-item').addEventListener('click', function () {
+                this.closest('tr').remove();
+                updateTotals();
+            });
+
+            // Set initial total
+            const total = price;
+            newRow.querySelector('.total').textContent = '₹' + total.toFixed(2);
+
+            orderItems.appendChild(newRow);
+            updateTotals();
+        }
+
+        // Event listeners
+        searchCustomerBtn.addEventListener('click', searchCustomers);
+        customerSearch.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchCustomers();
+            }
+        });
+
+        searchProductNameBtn.addEventListener('click', function () {
+            searchProducts(productNameSearch.value.trim(), 'name');
+        });
+
+        searchProductSkuBtn.addEventListener('click', function () {
+            searchProducts(productSkuSearch.value.trim(), 'sku');
+        });
+
+        productNameSearch.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchProducts(this.value.trim(), 'name');
+            }
+        });
+
+        productSkuSearch.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchProducts(this.value.trim(), 'sku');
+            }
+        });
+
+        // Customer selection
+        customerResults.addEventListener('click', function (e) {
+            if (e.target.classList.contains('select-customer')) {
+                const customer = e.target.dataset;
+                selectedCustomer.value = customer.name;
+                customerId.value = customer.id;
+                customerResults.style.display = 'none';
+                customerSearch.value = '';
+            }
+        });
+
+        // Product selection
+        productResults.addEventListener('click', function (e) {
+            if (e.target.classList.contains('add-product')) {
+                const product = e.target.dataset;
+                addProductToOrder(product);
+                // Don't hide results to allow adding more products
+            }
+        });
+
+        // Form submission
+        document.getElementById('orderForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            // Validate customer selection
+            if (!customerId.value) {
+                alert('Please select a customer');
+                return;
+            }
+
+            // Validate at least one product
+            if (orderItems.getElementsByTagName('tr').length === 0) {
+                alert('Please add at least one product');
+                return;
+            }
+
+            // Collect all order items
+            const items = [];
+            const rows = orderItems.getElementsByTagName('tr');
+
+            for (let row of rows) {
+                const productId = row.querySelector('input[name="product_id"]').value;
+                const quantity = row.querySelector('.quantity').value;
+                items.push({
+                    product_id: productId,
+                    quantity: parseInt(quantity)
+                });
+            }
+
+            // Add items to form data
+            const formData = new FormData(this);
+            formData.append('items', JSON.stringify(items));
+
+            // Submit form
+            fetch(this.action, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        alert(data.error || 'Error creating order');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error creating order');
+                });
+        });
+    });
+</script>
+{% endblock %}

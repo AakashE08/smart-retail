@@ -1,10 +1,55 @@
-node_modules/
-.env
-*.log
+# Python
 __pycache__/
-*.pkl
-invoice_*.json
-temp_*.json
-.DS_Store
-dist/
+*.py[cod]
+*$py.class
+*.so
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Environment variables
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Media files (if they shouldn't be in repo)
+media/
+staticfiles/
+
+# Debug logs
+debug.log
+*.log
