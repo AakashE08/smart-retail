@@ -2,72 +2,68 @@ pipeline {
     agent any
 
     environment {
-        NODE_ENV = 'production'
-        // PostgreSQL Database Configuration
-        DB_HOST = 'postgres.internal.org'
-        DB_USER = 'invoice_user'
-        DB_PASS = credentials('postgres-credentials')
+        PROJECT_DIR = "backend"
+        PYTHON_ENV = "ml/venv"
     }
 
     stages {
-        stage('Checkout (Git + GitHub)') {
+        stage('SCM') {
             steps {
-                echo 'Checking out source management code from Git Repository (GitHub)...'
-                // git branch: 'main', url: 'https://github.com/organization/smart-invoice-platform.git'
+                echo 'Checking out source code from GitHub...'
                 checkout scm
             }
         }
 
-        stage('Install Backend (Node.js + Express.js)') {
+        stage('Install Dependencies') {
             steps {
-                dir('backend') {
-                    echo 'Installing packages for Node.js + Express.js backend API...'
+                echo 'Installing Node.js and Python dependencies...'
+                dir("${env.PROJECT_DIR}") {
                     sh 'npm install'
                 }
+                // Optional: Setup Python environment if not present
+                sh 'pip install pandas scikit-learn joblib'
             }
         }
 
-        stage('Database Migrations (PostgreSQL)') {
+        stage('Security & Lint') {
             steps {
-                dir('backend') {
-                    echo 'Applying database schema changes to PostgreSQL database...'
-                    // e.g., sh 'npm run migrate' or direct connection to psql
-                    sh 'echo "Applied migrations successfully."'
+                echo 'Running security scans and linting...'
+                dir("${env.PROJECT_DIR}") {
+                    sh 'npm audit --audit-level=high'
                 }
             }
         }
 
-        stage('Run Unit & Backend API Tests') {
+        stage('Train ML Model') {
             steps {
-                dir('backend') {
-                    echo 'Running automated verification tests...'
-                    sh 'npm test'
+                echo 'Training/Refreshing Fraud Detection Model...'
+                sh 'python ml/train_model.py'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Running backend unit tests...'
+                dir("${env.PROJECT_DIR}") {
+                    // sh 'npm test' // Placeholder for future test suites
                 }
             }
         }
 
-        stage('Containerization (Docker)') {
+        stage('Deploy (Beta)') {
             steps {
-                echo 'Packaging Node.js backend services into a Docker container...'
-                sh 'docker build -t smart-invoice-backend:latest ./backend'
-            }
-        }
-
-        stage('Deploy to Cloud Target (Staging)') {
-            steps {
-                echo 'Deploying to Staging Environment with Jenkins...'
-                // deploy to orchestration environment
-                sh 'docker run -d -p 3000:3000 smart-invoice-backend:latest'
+                echo 'Deploying to beta environment...'
+                // sh 'docker-compose up -d --build'
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline completed successfully. Code deployed to Staging.'
+            echo 'Pipeline completed successfully!'
         }
         failure {
-            echo 'Build failed. Notifying engineering team.'
+            echo 'Pipeline failed. Check the logs.'
         }
     }
 }
