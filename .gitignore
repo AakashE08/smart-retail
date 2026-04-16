@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.log
+__pycache__/
+*.pkl
+invoice_*.json
+temp_*.json
+.DS_Store
+dist/
+build/
