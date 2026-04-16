@@ -45,7 +45,7 @@ pipeline {
             steps {
                 echo 'Running backend unit tests...'
                 dir("${env.PROJECT_DIR}") {
-                    // sh 'npm test' // Placeholder for future test suites
+                    // sh 'npm test' // Unit tests placeholder
                 }
             }
         }
